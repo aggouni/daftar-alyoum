@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 
 void main() {
@@ -500,12 +499,55 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _importBackup() async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: kPaper,
+        title: const Text("استيراد نسخة احتياطية", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("افتح ملف النسخة الاحتياطية، انسخ محتواه بالكامل، ثم الصقه هنا:", style: TextStyle(fontSize: 13, color: kTextDim)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller,
+              maxLines: 6,
+              textDirection: TextDirection.ltr,
+              decoration: InputDecoration(
+                hintText: "{ ... }",
+                filled: true, fillColor: kCard,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kCardLine)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () async {
+                  final clip = await Clipboard.getData("text/plain");
+                  if (clip?.text != null) controller.text = clip!.text!;
+                },
+                icon: const Icon(Icons.paste, size: 17),
+                label: const Text("لصق من الحافظة"),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("إلغاء", style: TextStyle(color: kTextDim))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: kInk),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("استيراد", style: TextStyle(color: Color(0xFFF3E9D2))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ["json"]);
-      if (result == null || result.files.single.path == null) return;
-      final file = File(result.files.single.path!);
-      final content = await file.readAsString();
-      final backup = Map<String, dynamic>.from(jsonDecode(content));
+      final backup = Map<String, dynamic>.from(jsonDecode(controller.text.trim()));
       final newIndex = await Store.importAll(backup);
       daysIndex = newIndex;
       await _goToDate(currentDate);
@@ -513,7 +555,7 @@ class _HomePageState extends State<HomePage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تم استرجاع النسخة الاحتياطية بنجاح ✅")));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تعذّر قراءة الملف، تأكد أنه ملف نسخة احتياطية صحيح")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("تعذّر قراءة النص، تأكد أنك لصقت محتوى ملف النسخة الاحتياطية كاملاً")));
     }
   }
 
