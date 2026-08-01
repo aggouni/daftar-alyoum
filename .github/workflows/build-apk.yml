@@ -1,0 +1,61 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Flutter project
+        run: flutter create --org com.aggouni --project-name daftar_alyoum daftar_app
+
+      - name: Add dependencies
+        working-directory: daftar_app
+        run: |
+          flutter pub add shared_preferences
+          flutter pub add google_fonts
+          flutter pub add path_provider
+          flutter pub add share_plus
+
+      - name: Copy app source code
+        run: cp main.dart daftar_app/lib/main.dart
+
+      - name: Set app name and permissions
+        working-directory: daftar_app
+        run: |
+          sed -i 's/android:label="daftar_alyoum"/android:label="دفتر اليوم"/' android/app/src/main/AndroidManifest.xml
+          sed -i '0,/<manifest /s//<manifest xmlns:tools="http:\/\/schemas.android.com\/tools" /' android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+
+      - name: Build APK
+        working-directory: daftar_app
+        run: flutter build apk --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daftar-alyoum-apk
+          path: daftar_app/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "دفتر اليوم - نسخة ${{ github.run_number }}"
+          files: daftar_app/build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
