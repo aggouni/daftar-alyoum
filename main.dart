@@ -41,6 +41,18 @@ DateTime keyToDate(String k) {
   return DateTime(parts[0], parts[1], parts[2]);
 }
 String todayKey() => dateKey(DateTime.now());
+
+// يوم العمل الافتراضي: يعرض دائمًا يوم أمس، ما عدا يوم السبت فيعرض الخميس (لأن الجمعة عطلة)
+String workDayKey() {
+  final now = DateTime.now();
+  DateTime target;
+  if (now.weekday == DateTime.saturday) {
+    target = now.subtract(const Duration(days: 2)); // السبت -> الخميس
+  } else {
+    target = now.subtract(const Duration(days: 1)); // باقي الأيام -> أمس
+  }
+  return dateKey(target);
+}
 String fmtMoney(double n) {
   final s = n.round().toString();
   final buf = StringBuffer();
@@ -220,7 +232,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String currentDate = todayKey();
+  String currentDate = workDayKey();
   String currentTab = "debts";
   DayData data = DayData();
   List<String> daysIndex = [];
@@ -428,7 +440,7 @@ class _HomePageState extends State<HomePage> {
                           itemBuilder: (c, i) {
                             final k = sorted[i];
                             final d = keyToDate(k);
-                            final isToday = k == todayKey();
+                            final isToday = k == workDayKey();
                             final label = "${kWeekdays[d.weekday % 7]}، ${d.day} ${kMonths[d.month - 1]} ${d.year}${isToday ? ' (اليوم)' : ''}";
                             return Container(
                               margin: const EdgeInsets.only(bottom: 9),
@@ -564,7 +576,7 @@ class _HomePageState extends State<HomePage> {
     if (loading) {
       return const Scaffold(backgroundColor: kPaper, body: Center(child: CircularProgressIndicator(color: kInk)));
     }
-    final isToday = currentDate == todayKey();
+    final isToday = currentDate == workDayKey();
     final d = keyToDate(currentDate);
 
     return Scaffold(
@@ -645,7 +657,7 @@ class _HomePageState extends State<HomePage> {
         if (!isToday) ...[
           const SizedBox(height: 12),
           InkWell(
-            onTap: () => _goToDate(todayKey()),
+            onTap: () => _goToDate(workDayKey()),
             borderRadius: BorderRadius.circular(99),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
