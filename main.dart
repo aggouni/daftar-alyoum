@@ -604,6 +604,7 @@ class _HomePageState extends State<HomePage> {
   }
 
 
+  void _openHistorySheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
