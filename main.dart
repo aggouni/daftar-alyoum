@@ -494,6 +494,7 @@ class _HomePageState extends State<HomePage> {
       final lastDay = DateTime(year, m + 1, 0).day;
 
       final rows = <List<String>>[];
+      final expenseDetails = <List<String>>[]; // [date, note, amount]
       double totalIncome = 0, totalExpenses = 0, totalNet = 0;
 
       for (int day = 1; day <= lastDay; day++) {
@@ -506,6 +507,9 @@ class _HomePageState extends State<HomePage> {
         totalExpenses += exp;
         totalNet += net;
         rows.add(["$day ${kMonths[m - 1]}", fmtMoney(inc), fmtMoney(exp), fmtMoney(net)]);
+        for (final ex in dd.expenses) {
+          expenseDetails.add(["$day ${kMonths[m - 1]}", ex.label.isEmpty ? "—" : ex.label, fmtMoney(ex.amount)]);
+        }
       }
 
       final arabicFont = await PdfGoogleFonts.notoNaskhArabicRegular();
@@ -575,6 +579,37 @@ class _HomePageState extends State<HomePage> {
                 _pdfTotalRow("الصافي الإجمالي للشهر", fmtMoney(totalNet), arabicBold, arabicBold, pdfInk, big: true),
               ]),
             ),
+            pw.NewPage(),
+            pw.Text("تفاصيل المصروفات", style: pw.TextStyle(font: arabicBold, fontSize: 16, color: pdfInk)),
+            pw.SizedBox(height: 4),
+            pw.Text("${kMonths[m - 1]} $year", style: pw.TextStyle(font: arabicFont, fontSize: 10, color: PdfColors.grey600)),
+            pw.SizedBox(height: 12),
+            if (expenseDetails.isEmpty)
+              pw.Text("لا توجد مصروفات مسجلة هذا الشهر", style: pw.TextStyle(font: arabicFont, fontSize: 11, color: PdfColors.grey600))
+            else
+              pw.Table(
+                border: pw.TableBorder.all(color: pdfLine, width: 0.6),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(1.6),
+                  1: const pw.FlexColumnWidth(3.4),
+                  2: const pw.FlexColumnWidth(1.8),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: pdfInk),
+                    children: [
+                      _pdfCell("التاريخ", arabicBold, PdfColors.white, header: true),
+                      _pdfCell("البيان", arabicBold, PdfColors.white, header: true),
+                      _pdfCell("المبلغ", arabicBold, PdfColors.white, header: true),
+                    ],
+                  ),
+                  ...expenseDetails.map((r) => pw.TableRow(children: [
+                        _pdfCell(r[0], arabicFont, pdfInk),
+                        _pdfCell(r[1], arabicFont, PdfColors.grey700),
+                        _pdfCell(r[2], arabicFont, pdfExpenses),
+                      ])),
+                ],
+              ),
           ],
         ),
       );
